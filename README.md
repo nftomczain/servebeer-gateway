@@ -97,7 +97,7 @@ Place certificates in `/home/user/cert/`:
 - `fullchain.pem` - Full certificate chain
 - `privkey.pem` - Private key
 
-Or modify paths in `app.py` function `create_ssl_context()`.
+Or modify paths in `bpp.py` function `create_ssl_context()`.
 
 ## Usage
 
@@ -105,7 +105,7 @@ Or modify paths in `app.py` function `create_ssl_context()`.
 
 ```bash
 source venv/bin/activate
-sudo python3 app.py
+sudo python3 bpp.py
 ```
 
 ### Run as Systemd Service
@@ -221,7 +221,7 @@ Required information:
 
 ```
 servebeer-gateway/
-├── app.py                 # Main application
+├── bpp.py                 # Main application
 ├── requirements.txt       # Python dependencies
 ├── .env.example          # Configuration template
 ├── .gitignore            # Git ignore rules
@@ -302,7 +302,7 @@ sqlite3 database/servebeer.db ".tables"
 
 # Rebuild if corrupted
 rm database/servebeer.db
-python3 app.py  # Will recreate on startup
+python3 bpp.py  # Will recreate on startup
 ```
 
 ## License
