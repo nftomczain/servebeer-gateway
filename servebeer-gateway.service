@@ -1,0 +1,14 @@
+[Unit]
+Description=ServeBeer IPFS Gateway
+After=network.target
+
+[Service]
+Type=simple
+User=premp
+WorkingDirectory=/home/premp/gateway_bacend
+ExecStart=/home/premp/gateway_bacend/venv/bin/python3 /home/premp/gateway_bacend/gateway-v1.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

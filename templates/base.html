@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ServeBeer IPFS Gateway{% endblock %}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
+            color: #ECF0F1;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        header {
+            background: rgba(26, 188, 156, 0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #4ECDC4;
+            padding: 15px 0;
+            margin-bottom: 40px;
+        }
+        .logo {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo h1 { color: #4ECDC4; font-size: 1.5rem; }
+        nav a {
+            color: #4ECDC4;
+            text-decoration: none;
+            margin-left: 20px;
+            transition: color 0.3s;
+        }
+        nav a:hover { color: #45B7B8; }
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #95A5A6;
+            border-top: 1px solid #34495E;
+            margin-top: 60px;
+        }
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <h1>🍺 ServeBeer IPFS Gateway</h1>
+            <nav>
+                <a href="/">Home</a>
+                <a href="/health">Health</a>
+                <a href="/dmca">DMCA</a>
+                <a href="/terms">Terms</a>
+                <a href="/cookies">Cookies</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer>
+        <p>ServeBeer IPFS Gateway - Community Infrastructure</p>
+        <p style="font-size: 0.9em; margin-top: 10px;">
+            <a href="/terms" style="color: #4ECDC4;">Terms</a> | 
+            <a href="/cookies" style="color: #4ECDC4;">Cookies</a> | 
+            <a href="/dmca" style="color: #4ECDC4;">DMCA</a>
+        </p>
+    </footer>
+
+<!-- Cookie Consent Banner -->
+    <div id="cookie-banner" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #34495e; padding: 20px; border-top: 2px solid #4ecdc4; z-index: 9999; box-shadow: 0 -5px 20px rgba(0,0,0,0.3);">
+        <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap;">
+            <p style="margin: 0; color: #ecf0f1; flex: 1;">
+                We use essential cookies for gateway functionality. No tracking. 
+                <a href="/cookies" style="color: #4ecdc4; text-decoration: underline;">Cookie Policy</a>
+            </p>
+            <button onclick="acceptCookies()" style="background: #4ecdc4; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-weight: bold; white-space: nowrap;">
+                Accept
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        // Cookie consent
+        if (!localStorage.getItem('cookiesAccepted')) {
+            document.getElementById('cookie-banner').style.display = 'block';
+        }
+        function acceptCookies() {
+            localStorage.setItem('cookiesAccepted', 'true');
+            document.getElementById('cookie-banner').style.display = 'none';
+        }
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+

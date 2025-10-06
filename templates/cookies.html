@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Cookie Policy - ServeBeer{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cookies-card {
+        background: #34495E;
+        padding: 50px;
+        border-radius: 20px;
+        max-width: 900px;
+        margin: 0 auto;
+        line-height: 1.9;
+        font-size: 17px;
+    }
+    h1 { color: #4ECDC4; font-size: 2.5rem; text-align: center; margin-bottom: 30px; }
+    h2 { color: #4ECDC4; font-size: 1.8rem; margin-top: 40px; margin-bottom: 20px; }
+    p, li { font-size: 17px; line-height: 1.8; margin-bottom: 15px; }
+    .cookie-section {
+        background: rgba(52, 73, 94, 0.5);
+        padding: 25px;
+        margin: 30px 0;
+        border-radius: 15px;
+        border-left: 4px solid #27AE60;
+    }
+    ul { padding-left: 30px; }
+    li { margin: 15px 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cookies-card">
+    <h1>🍪 Cookie Policy</h1>
+    
+    <div class="cookie-section">
+        <h2>What are cookies?</h2>
+        <p>Cookies are small text files stored on your device when you visit our website. ServeBeer takes a privacy-first approach - we only use essential cookies required for the service to function.</p>
+    </div>
+
+    <div class="cookie-section">
+        <h2>✅ Essential Cookies (Required)</h2>
+        <p>We use only minimal essential cookies:</p>
+        <ul>
+            <li><strong>cookiesAccepted</strong> - Remembers your cookie preferences (1 year)</li>
+            <li><strong>Session data</strong> - Basic technical data for gateway functionality</li>
+        </ul>
+    </div>
+
+    <div class="cookie-section" style="border-left-color: #27AE60;">
+        <h2>🚫 We do NOT use:</h2>
+        <ul>
+            <li>Tracking cookies</li>
+            <li>Advertising cookies</li>
+            <li>Analytics cookies (Google Analytics, etc.)</li>
+            <li>Third-party cookies</li>
+            <li>Social media cookies</li>
+        </ul>
+        <p><strong>Your privacy is protected.</strong> We don't track, profile, or sell your data.</p>
+    </div>
+
+    <p style="text-align: center; margin-top: 40px;">
+        <a href="/" style="color: #4ecdc4;">← Back to Home</a> | 
+        <a href="/terms" style="color: #4ecdc4;">Terms of Service</a>
+    </p>
+</div>
+{% endblock %}

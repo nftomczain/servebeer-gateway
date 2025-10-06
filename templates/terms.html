@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Terms of Service - ServeBeer{% endblock %}
+
+{% block extra_css %}
+<style>
+    .terms-card {
+        background: #34495E;
+        padding: 50px;
+        border-radius: 20px;
+        max-width: 900px;
+        margin: 0 auto;
+        line-height: 1.9;
+        font-size: 17px;
+    }
+    h1 { color: #4ECDC4; font-size: 2.5rem; text-align: center; margin-bottom: 30px; }
+    h2 { color: #4ECDC4; font-size: 1.8rem; margin-top: 40px; margin-bottom: 20px; }
+    p, li { font-size: 17px; line-height: 1.8; margin-bottom: 15px; }
+    .section {
+        background: rgba(52, 73, 94, 0.5);
+        padding: 30px;
+        margin: 30px 0;
+        border-radius: 15px;
+        border-left: 4px solid #4ECDC4;
+    }
+    ul { padding-left: 30px; }
+    li { margin: 15px 0; }
+    .warning {
+        background: rgba(231, 76, 60, 0.2);
+        border: 2px solid #e74c3c;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 20px 0;
+        font-weight: bold;
+        font-size: 18px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="terms-card">
+    <h1>Terms of Service</h1>
+    
+    <div class="section">
+        <h2>1. Service Description</h2>
+        <p>ServeBeer provides IPFS gateway services for decentralized content access. We operate as a technical infrastructure provider.</p>
+    </div>
+
+    <div class="section">
+        <h2>2. User Responsibilities</h2>
+        <div class="warning">
+            You are solely responsible for the legality of content accessed through our gateway.
+        </div>
+        <p><strong>You must:</strong></p>
+        <ul>
+            <li>Comply with all applicable laws</li>
+            <li>Respect intellectual property rights</li>
+            <li>Use the service for lawful purposes only</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>3. Prohibited Content</h2>
+        <ul>
+            <li>Illegal material</li>
+            <li>Copyright infringement</li>
+            <li>Malware and harmful code</li>
+            <li>Privacy violations</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>4. DMCA Compliance</h2>
+        <p>We respond to valid DMCA takedown notices. To file a report, visit:</p>
+        <p><a href="/dmca/report" style="color: #4ecdc4;">DMCA Report Form</a></p>
+    </div>
+
+    <div class="section">
+        <h2>5. Limitation of Liability</h2>
+        <p>Service is provided "AS IS" without warranties. We are not liable for content availability, service interruptions, or user-generated content.</p>
+    </div>
+
+    <p style="text-align: center; margin-top: 40px;">
+        <a href="/" style="color: #4ecdc4;">← Back to Home</a> | 
+        <a href="/cookies" style="color: #4ecdc4;">Cookie Policy</a> |
+        <a href="/dmca" style="color: #4ecdc4;">DMCA Policy</a>
+    </p>
+</div>
+{% endblock %}

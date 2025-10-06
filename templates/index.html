@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}ServeBeer IPFS Gateway{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero {
+        text-align: center;
+        padding: 60px 20px;
+        background: rgba(78, 205, 196, 0.05);
+        border-radius: 15px;
+        margin-bottom: 40px;
+    }
+    .hero h1 {
+        font-size: 2.5rem;
+        color: #4ECDC4;
+        margin-bottom: 20px;
+    }
+    .fetch-box {
+        background: #34495E;
+        padding: 30px;
+        border-radius: 15px;
+        border: 2px solid #4ECDC4;
+        margin: 40px 0;
+    }
+    .fetch-form {
+        display: flex;
+        gap: 10px;
+        margin: 20px 0;
+    }
+    .fetch-form input {
+        flex: 1;
+        padding: 12px;
+        border: none;
+        border-radius: 5px;
+        font-size: 14px;
+    }
+    .fetch-form button {
+        background: #4ECDC4;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    .fetch-form button:hover { background: #45B7B8; }
+    .examples {
+        background: rgba(78, 205, 196, 0.1);
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+    .examples a {
+        display: block;
+        color: #4ECDC4;
+        margin: 8px 0;
+        padding: 8px;
+        background: rgba(78, 205, 196, 0.1);
+        border-radius: 5px;
+        text-decoration: none;
+        word-break: break-all;
+    }
+    .examples a:hover { background: rgba(78, 205, 196, 0.2); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>Public IPFS Gateway</h1>
+    <p>Decentralized content access with HTTPS</p>
+</div>
+
+<div class="fetch-box">
+    <h2 style="color: #4ECDC4; margin-bottom: 15px;">📥 Fetch IPFS Content</h2>
+    <p>Enter any IPFS CID to retrieve content:</p>
+    <form class="fetch-form" onsubmit="fetchCID(event)">
+        <input type="text" 
+               id="cidInput" 
+               placeholder="Qm... or bafybei..." 
+               required>
+        <button type="submit">🔍 Fetch</button>
+    </form>
+    
+    <div class="examples">
+        <strong>Try these examples:</strong>
+        <a href="/ipfs/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG">
+            QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function fetchCID(e) {
+        e.preventDefault();
+        const cid = document.getElementById('cidInput').value.trim();
+        if (cid) {
+            window.location.href = '/ipfs/' + cid;
+        }
+    }
+</script>
+{% endblock %}

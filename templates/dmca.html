@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}DMCA Policy - ServeBeer IPFS Gateway{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dmca-container {
+        background: #34495E;
+        padding: 50px;
+        border-radius: 15px;
+        border: 2px solid #e74c3c;
+        line-height: 1.9;
+        font-size: 17px;
+    }
+    .dmca-container h1 { 
+        color: #e74c3c; 
+        margin-bottom: 25px; 
+        font-size: 2.5rem;
+    }
+    .dmca-container h2 { 
+        color: #4ECDC4; 
+        margin-top: 40px; 
+        margin-bottom: 20px;
+        font-size: 1.8rem;
+    }
+    .dmca-container h3 {
+        font-size: 1.3rem;
+        margin-bottom: 15px;
+    }
+    .dmca-container p {
+        margin-bottom: 20px;
+        font-size: 17px;
+    }
+    .dmca-container ol, .dmca-container ul {
+        margin: 20px 0;
+        padding-left: 30px;
+        font-size: 17px;
+    }
+    .dmca-container li {
+        margin: 15px 0;
+        line-height: 1.8;
+    }
+    .contact-box {
+        background: rgba(52, 152, 219, 0.2);
+        border-left: 4px solid #3498db;
+        padding: 25px;
+        margin: 30px 0;
+        border-radius: 5px;
+        font-size: 18px;
+    }
+    .warning {
+        background: rgba(231, 76, 60, 0.2);
+        border: 2px solid #e74c3c;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 30px 0;
+        font-size: 18px;
+        font-weight: bold;
+    }
+    code {
+        background: #2c3e50;
+        padding: 5px 10px;
+        border-radius: 3px;
+        color: #4ECDC4;
+        font-size: 16px;
+    }
+    a { 
+        color: #4ecdc4; 
+        text-decoration: none;
+        font-size: 18px;
+    }
+    a:hover { color: #45b7b8; text-decoration: underline; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dmca-container">
+    <h1>DMCA Takedown Policy</h1>
+    <p>ServeBeer IPFS Gateway complies with the Digital Millennium Copyright Act (DMCA).</p>
+    
+    <h2>File a DMCA Takedown Notice</h2>
+    <p>To report copyright infringement, send a notice containing:</p>
+    <ol>
+        <li><strong>Identification of copyrighted work</strong> - describe the work being infringed</li>
+        <li><strong>Infringing material</strong> - provide IPFS CID: <code>Qm...</code></li>
+        <li><strong>Your contact info</strong> - name, address, phone, email</li>
+        <li><strong>Good faith statement</strong> - "I have a good faith belief that use is not authorized"</li>
+        <li><strong>Accuracy statement</strong> - "I swear, under penalty of perjury, this information is accurate"</li>
+        <li><strong>Your signature</strong> - physical or electronic</li>
+    </ol>
+    
+    <div class="contact-box">
+        <h3>DMCA Agent Contact:</h3>
+        <p><strong>Form:</strong> <a href="/dmca/report">Submit DMCA Report</a></p>
+        <p><strong>Response Time:</strong> Within 48 hours</p>
+    </div>
+    
+    <h2>Counter-Notification</h2>
+    <p>If your content was removed and you believe it was a mistake, file a counter-notification with:</p>
+    <ul>
+        <li>Your contact information</li>
+        <li>Removed content CID</li>
+        <li>Statement under penalty of perjury that removal was in error</li>
+        <li>Consent to federal court jurisdiction</li>
+        <li>Your signature</li>
+    </ul>
+    
+    <div class="warning">
+        <strong>Warning:</strong> False DMCA claims may result in legal liability under 17 U.S.C. § 512(f).
+    </div>
+    
+    <h2>What Happens Next?</h2>
+    <ol>
+        <li>We review your notice within 48 hours</li>
+        <li>If valid, content is unpinned from our nodes</li>
+        <li>User is notified of the takedown</li>
+        <li>Content may still exist on other IPFS nodes globally</li>
+    </ol>
+    
+    <p style="text-align: center; margin-top: 40px;">
+        <a href="/dmca/report">File DMCA Report</a> | 
+        <a href="/">Back to Home</a>
+    </p>
+</div>
+{% endblock %}

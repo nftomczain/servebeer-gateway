@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}File DMCA Takedown - ServeBeer{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        background: #34495e;
+        padding: 50px;
+        border-radius: 15px;
+        border: 2px solid #e74c3c;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .form-container h1 { 
+        color: #e74c3c; 
+        margin-bottom: 25px;
+        font-size: 2.5rem;
+    }
+    label {
+        display: block;
+        margin-top: 25px;
+        color: #4ecdc4;
+        font-weight: bold;
+        margin-bottom: 8px;
+        font-size: 18px;
+    }
+    input, textarea {
+        width: 100%;
+        padding: 15px;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        background: #2c3e50;
+        color: #ecf0f1;
+    }
+    textarea { 
+        resize: vertical;
+        line-height: 1.6;
+    }
+    button {
+        background: #e74c3c;
+        color: white;
+        padding: 18px 40px;
+        border: none;
+        border-radius: 5px;
+        margin-top: 30px;
+        cursor: pointer;
+        font-size: 18px;
+        font-weight: bold;
+        width: 100%;
+    }
+    button:hover { background: #c0392b; }
+    .warning {
+        background: rgba(231, 76, 60, 0.2);
+        padding: 20px;
+        border-radius: 5px;
+        margin: 25px 0;
+        border-left: 4px solid #e74c3c;
+        font-size: 17px;
+        line-height: 1.7;
+    }
+    .checkbox-label {
+        display: flex;
+        align-items: flex-start;
+        margin-top: 20px;
+        font-size: 16px;
+        line-height: 1.7;
+    }
+    .checkbox-label input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        margin-right: 12px;
+        margin-top: 3px;
+        flex-shrink: 0;
+    }
+    .checkbox-label label {
+        margin: 0;
+        font-weight: normal;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1>File DMCA Takedown Notice</h1>
+    
+    <div class="warning">
+        <strong>Warning:</strong> Filing a false DMCA claim may result in legal liability.
+        Ensure you have the legal right to file this notice.
+    </div>
+    
+    <form method="POST">
+        <label for="copyright_owner">Copyright Owner / Authorized Agent:</label>
+        <input type="text" 
+               id="copyright_owner"
+               name="copyright_owner" 
+               placeholder="Your name or company name" 
+               required>
+        
+        <label for="contact_email">Contact Email:</label>
+        <input type="email" 
+               id="contact_email"
+               name="contact_email" 
+               placeholder="your@email.com" 
+               required>
+        
+        <label for="infringing_cid">Infringing IPFS CID:</label>
+        <input type="text" 
+               id="infringing_cid"
+               name="infringing_cid" 
+               placeholder="Qm... or bafybei..." 
+               pattern="[QqBb][a-zA-Z0-9]{44,}"
+               required>
+        
+        <label for="description">Description of Copyrighted Work:</label>
+        <textarea id="description"
+                  name="description" 
+                  rows="5" 
+                  placeholder="Describe the original copyrighted work and how it's being infringed"
+                  required></textarea>
+        
+        <div class="checkbox-label">
+            <input type="checkbox" 
+                   id="good_faith"
+                   name="good_faith" 
+                   required>
+            <label for="good_faith" style="margin: 0; font-weight: normal;">
+                I have a good faith belief that use of the material is not authorized by the copyright owner
+            </label>
+        </div>
+        
+        <div class="checkbox-label">
+            <input type="checkbox" 
+                   id="accuracy"
+                   name="accuracy" 
+                   required>
+            <label for="accuracy" style="margin: 0; font-weight: normal;">
+                I swear, under penalty of perjury, that the information in this notice is accurate
+            </label>
+        </div>
+        
+        <label for="signature">Electronic Signature (Type your full name):</label>
+        <input type="text" 
+               id="signature"
+               name="signature" 
+               placeholder="John Doe" 
+               required>
+        
+        <button type="submit">Submit DMCA Notice</button>
+    </form>
+    
+    <p style="text-align: center; margin-top: 30px;">
+        <a href="/dmca" style="color: #4ecdc4;">View Full DMCA Policy</a>
+    </p>
+</div>
+{% endblock %}
