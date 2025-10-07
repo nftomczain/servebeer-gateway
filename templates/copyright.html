@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Copyright Takedown Policy - ServeBeer IPFS Gateway{% endblock %}
+
+{% block extra_css %}
+<style>
+    .copyright-container {
+        background: #34495E;
+        padding: 50px;
+        border-radius: 15px;
+        border: 2px solid #e74c3c;
+        line-height: 1.9;
+        font-size: 17px;
+    }
+    .copyright-container h1 { 
+        color: #e74c3c; 
+        margin-bottom: 25px; 
+        font-size: 2.5rem;
+    }
+    .copyright-container h2 { 
+        color: #4ECDC4; 
+        margin-top: 40px; 
+        margin-bottom: 20px;
+        font-size: 1.8rem;
+    }
+    .copyright-container h3 {
+        font-size: 1.4rem;
+        margin-bottom: 15px;
+        color: #ECF0F1;
+    }
+    .copyright-container p {
+        margin-bottom: 20px;
+        font-size: 17px;
+    }
+    .copyright-container ol, .copyright-container ul {
+        margin: 20px 0;
+        padding-left: 30px;
+        font-size: 17px;
+    }
+    .copyright-container li {
+        margin: 15px 0;
+        line-height: 1.8;
+    }
+    .contact-box {
+        background: rgba(52, 152, 219, 0.2);
+        border-left: 4px solid #3498db;
+        padding: 25px;
+        margin: 30px 0;
+        border-radius: 5px;
+        font-size: 18px;
+    }
+    .warning {
+        background: rgba(231, 76, 60, 0.2);
+        border: 2px solid #e74c3c;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 30px 0;
+        font-size: 18px;
+        font-weight: bold;
+    }
+    code {
+        background: #2c3e50;
+        padding: 5px 10px;
+        border-radius: 3px;
+        color: #4ECDC4;
+        font-size: 16px;
+    }
+    a { 
+        color: #4ecdc4; 
+        text-decoration: none;
+        font-size: 18px;
+    }
+    a:hover { color: #45b7b8; text-decoration: underline; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="copyright-container">
+    <h1>⚖️ Polityka Ochrony Praw Autorskich</h1>
+    <p><strong>Copyright Takedown Policy</strong></p>
+    
+    <h2>1. Rola Operatora Gateway</h2>
+    <p>ServeBeer IPFS Gateway działa jako <strong>operator techniczny</strong> infrastruktury dostępu do sieci IPFS. Nie jesteśmy dostawcą treści ani ich hostem w tradycyjnym rozumieniu.</p>
+    
+    <p><strong>Nasza rola:</strong></p>
+    <ul>
+        <li>Udostępniamy publiczny dostęp HTTP/HTTPS do sieci IPFS</li>
+        <li>Proxyujemy żądania do lokalnych węzłów IPFS</li>
+        <li>Reagujemy na zgłoszenia naruszeń praw autorskich</li>
+        <li>Utrzymujemy listę zablokowanych treści</li>
+    </ul>
+    
+    <p><strong>Czego NIE robimy:</strong></p>
+    <ul>
+        <li>Nie hostujemy treści na scentralizowanych serwerach</li>
+        <li>Nie moderujemy treści przed publikacją</li>
+        <li>Nie kontrolujemy globalnej sieci IPFS</li>
+        <li>Nie gwarantujemy usunięcia treści z całej sieci IPFS</li>
+    </ul>
+
+    <h2>2. Podstawa Prawna</h2>
+    <p>Nasza polityka jest zgodna z:</p>
+    <ul>
+        <li><strong>Dyrektywą UE 2001/29/WE</strong> - harmonizacja prawa autorskiego w UE</li>
+        <li><strong>Dyrektywą DSA (2022/2065)</strong> - Digital Services Act</li>
+        <li><strong>Polską ustawą o prawie autorskim i prawach pokrewnych</strong></li>
+        <li><strong>Art. 14 Dyrektywy e-Commerce</strong> - odpowiedzialność pośredników</li>
+    </ul>
+
+    <h2>3. Zgłaszanie Naruszeń</h2>
+    <p>Jeśli uważasz, że treści dostępne przez nasz gateway naruszają Twoje prawa autorskie, możesz zgłosić to przez formularz.</p>
+
+    <h3>Wymagane informacje:</h3>
+    <ol>
+        <li><strong>Dane uprawnionego:</strong> Imię, nazwisko/nazwa firmy, adres, email, telefon</li>
+        <li><strong>Identyfikacja utworu:</strong> Opis utworu którego prawa są naruszone</li>
+        <li><strong>Lokalizacja naruszenia:</strong> CID (Content Identifier) w formacie <code>Qm...</code> lub <code>bafy...</code></li>
+        <li><strong>Podstawa prawna:</strong> Wskazanie, jakie konkretnie prawa zostały naruszone</li>
+        <li><strong>Oświadczenie uprawnionego:</strong> Potwierdzenie, że jesteś właścicielem praw lub działasz w jego imieniu</li>
+        <li><strong>Podpis:</strong> Elektroniczny lub własnoręczny</li>
+    </ol>
+
+    <div class="contact-box">
+        <h3>📧 Zgłoś Naruszenie:</h3>
+        <p><strong>Formularz:</strong> <a href="/copyright/report">Zgłoś Naruszenie Praw Autorskich</a></p>
+        <p><strong>Czas odpowiedzi:</strong> Do 48 godzin roboczych</p>
+        <p><strong>Języki:</strong> Polski, English</p>
+    </div>
+
+    <h2>4. Procedura Rozpatrywania</h2>
+    <ol>
+        <li><strong>Otrzymanie zgłoszenia</strong> - potwierdzenie email w ciągu 24h</li>
+        <li><strong>Weryfikacja formalna</strong> - sprawdzenie kompletności zgłoszenia</li>
+        <li><strong>Ocena zasadności</strong> - analiza prawna i techniczna (do 48h)</li>
+        <li><strong>Decyzja</strong>:
+            <ul>
+                <li><strong>Zasadne:</strong> CID dodawany do blacklist, treść blokowana w gateway</li>
+                <li><strong>Niezasadne:</strong> Odmowa z uzasadnieniem</li>
+                <li><strong>Niejasne:</strong> Prośba o uzupełnienie</li>
+            </ul>
+        </li>
+        <li><strong>Informacja zwrotna</strong> - email do zgłaszającego</li>
+    </ol>
+
+    <h2>5. Skutki Blokady</h2>
+    <div class="warning">
+        <strong>⚠️ Ważne:</strong> Blokada w naszym gateway NIE usuwa treści z sieci IPFS globalnie.
+    </div>
+    
+    <p><strong>Co się dzieje po zablokowaniu CID:</strong></p>
+    <ul>
+        <li>✅ Treść NIE jest dostępna przez <code>ipfs.servebeer.com</code></li>
+        <li>✅ CID zwraca błąd HTTP 451 (Unavailable For Legal Reasons)</li>
+        <li>❌ Treść NADAL istnieje w globalnej sieci IPFS</li>
+        <li>❌ Inne publiczne gateway mogą ją wyświetlać</li>
+        <li>❌ Użytkownicy lokalnych węzłów mają dostęp</li>
+    </ul>
+
+    <h2>6. Kontr-Zgłoszenie</h2>
+    <p>Jeśli Twoja treść została zablokowana i uważasz, że to pomyłka, możesz złożyć kontr-zgłoszenie.</p>
+    
+    <p><strong>Wymagane informacje:</strong></p>
+    <ul>
+        <li>Twoje dane kontaktowe</li>
+        <li>Zablokowany CID</li>
+        <li>Wyjaśnienie, dlaczego blokada jest nieuzasadniona</li>
+        <li>Dowody uprawnienia do publikacji (opcjonalnie)</li>
+    </ul>
+
+    <p><strong>Procedura:</strong></p>
+    <ol>
+        <li>Przesyłamy kontr-zgłoszenie do pierwotnego zgłaszającego</li>
+        <li>Okres 14 dni na odpowiedź</li>
+        <li>Brak odpowiedzi = możliwe przywrócenie dostępu</li>
+        <li>Spór = sprawa do rozstrzygnięcia sądowego</li>
+    </ol>
+
+    <h2>7. Fałszywe Zgłoszenia</h2>
+    <div class="warning">
+        Składanie fałszywych zgłoszeń naruszeń może skutkować odpowiedzialnością prawną!
+    </div>
+    
+    <p>Świadome składanie nieprawdziwych zgłoszeń może być podstawą do:</p>
+    <ul>
+        <li>Odpowiedzialności cywilnej za szkody</li>
+        <li>Zablokowania możliwości składania zgłoszeń</li>
+        <li>Zgłoszenia do organów ścigania (w przypadkach rażących)</li>
+    </ul>
+
+    <h2>8. Ograniczenia Odpowiedzialności</h2>
+    <p>Jako operator techniczny korzystamy z <strong>ograniczenia odpowiedzialności</strong> przewidzianego w:</p>
+    <ul>
+        <li>Art. 14 Dyrektywy e-Commerce (2000/31/WE)</li>
+        <li>Art. 5-7 DSA (Digital Services Act)</li>
+    </ul>
+
+    <p><strong>Nie ponosimy odpowiedzialności za:</strong></p>
+    <ul>
+        <li>Treści publikowane przez użytkowników</li>
+        <li>Dostępność treści w globalnej sieci IPFS</li>
+        <li>Działania innych operatorów gateway</li>
+        <li>Szkody wynikłe z korzystania z sieci IPFS</li>
+    </ul>
+
+    <h2>9. Współpraca z Organami</h2>
+    <p>Współpracujemy z organami ścigania i sądami w zakresie przewidzianym prawem:</p>
+    <ul>
+        <li>Odpowiadamy na prawomocne nakazy sądowe</li>
+        <li>Udostępniamy dane na żądanie prokuratury</li>
+        <li>Zgłaszamy przestępstwa gdy mamy ku temu podstawy</li>
+    </ul>
+
+    <h2>10. Kontakt</h2>
+    <div class="contact-box">
+        <h3>📧 Dane kontaktowe:</h3>
+        <p><strong>Zgłoszenia naruszeń:</strong> <a href="/copyright/report">Formularz online</a></p>
+        <p><strong>Pytania prawne:</strong> Przez GitHub Issues</p>
+        <p><strong>Współpraca z organami:</strong> Tylko na podstawie oficjalnych pism</p>
+    </div>
+
+    <h2>11. Zmiany w Polityce</h2>
+    <p>Polityka może być aktualizowana w związku ze zmianami prawnymi lub technicznymi.</p>
+    <ul>
+        <li>Data ostatniej aktualizacji widoczna na górze strony</li>
+        <li>Istotne zmiany - powiadomienie email</li>
+        <li>Historia zmian dostępna w repozytorium GitHub</li>
+    </ul>
+
+    <p style="text-align: center; margin-top: 40px;">
+        <a href="/copyright/report">📝 Zgłoś Naruszenie</a> | 
+        <a href="/">🏠 Strona Główna</a> |
+        <a href="/terms">📋 Regulamin</a>
+    </p>
+
+    <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #4ECDC4; color: #95A5A6; font-size: 0.9em;">
+        <p><strong>Operator techniczny sieci IPFS</strong></p>
+        <p style="font-style: italic;">"Decentralizacja wymaga odpowiedzialności"</p>
+        <p>© 2025 ServeBeer IPFS Gateway</p>
+    </div>
+</div>
+{% endblock %}

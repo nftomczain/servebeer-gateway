@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block title %}Zgłoś Naruszenie Praw Autorskich - ServeBeer{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        background: #34495e;
+        padding: 50px;
+        border-radius: 15px;
+        border: 2px solid #e74c3c;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .form-container h1 { 
+        color: #e74c3c; 
+        margin-bottom: 25px;
+        font-size: 2.5rem;
+    }
+    .form-container h2 {
+        color: #4ECDC4;
+        font-size: 1.5rem;
+        margin: 30px 0 20px 0;
+    }
+    label {
+        display: block;
+        margin-top: 25px;
+        color: #4ecdc4;
+        font-weight: bold;
+        margin-bottom: 8px;
+        font-size: 18px;
+    }
+    .help-text {
+        color: #95A5A6;
+        font-size: 14px;
+        margin-top: 5px;
+        font-style: italic;
+    }
+    input, textarea, select {
+        width: 100%;
+        padding: 15px;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        background: #2c3e50;
+        color: #ecf0f1;
+    }
+    textarea { 
+        resize: vertical;
+        line-height: 1.6;
+        min-height: 120px;
+    }
+    button {
+        background: #e74c3c;
+        color: white;
+        padding: 18px 40px;
+        border: none;
+        border-radius: 5px;
+        margin-top: 30px;
+        cursor: pointer;
+        font-size: 18px;
+        font-weight: bold;
+        width: 100%;
+    }
+    button:hover { background: #c0392b; }
+    .warning {
+        background: rgba(231, 76, 60, 0.2);
+        padding: 20px;
+        border-radius: 5px;
+        margin: 25px 0;
+        border-left: 4px solid #e74c3c;
+        font-size: 17px;
+        line-height: 1.7;
+    }
+    .info-box {
+        background: rgba(52, 152, 219, 0.2);
+        padding: 20px;
+        border-radius: 5px;
+        margin: 25px 0;
+        border-left: 4px solid #3498db;
+        font-size: 16px;
+        line-height: 1.7;
+    }
+    .checkbox-label {
+        display: flex;
+        align-items: flex-start;
+        margin-top: 20px;
+        font-size: 16px;
+        line-height: 1.7;
+    }
+    .checkbox-label input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        margin-right: 12px;
+        margin-top: 3px;
+        flex-shrink: 0;
+    }
+    .checkbox-label label {
+        margin: 0;
+        font-weight: normal;
+        color: #ECF0F1;
+    }
+    .required {
+        color: #e74c3c;
+        margin-left: 3px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1>⚖️ Zgłoszenie Naruszenia Praw Autorskich</h1>
+    <p style="color: #BDC3C7; font-size: 17px;">Copyright Infringement Report Form</p>
+    
+    <div class="warning">
+        <strong>⚠️ Uwaga / Warning:</strong><br>
+        Składanie fałszywych zgłoszeń może skutkować odpowiedzialnością prawną.<br>
+        <em>Filing false reports may result in legal liability.</em>
+    </div>
+
+    <div class="info-box">
+        <strong>ℹ️ Przed zgłoszeniem / Before reporting:</strong>
+        <ul style="margin: 10px 0; padding-left: 20px;">
+            <li>Upewnij się, że jesteś właścicielem praw lub działasz w jego imieniu</li>
+            <li>Przygotuj dokładny opis naruszenia</li>
+            <li>Znajdź CID (identyfikator IPFS) naruszającej treści</li>
+            <li>Czas odpowiedzi: do 48 godzin roboczych</li>
+        </ul>
+    </div>
+    
+    <form method="POST">
+        <h2>1. Dane Zgłaszającego / Reporter Information</h2>
+        
+        <label for="reporter_type">
+            Typ zgłaszającego / Reporter Type<span class="required">*</span>
+        </label>
+        <select id="reporter_type" name="reporter_type" required>
+            <option value="">-- Wybierz / Select --</option>
+            <option value="owner">Właściciel praw / Copyright Owner</option>
+            <option value="agent">Pełnomocnik / Authorized Agent</option>
+            <option value="representative">Przedstawiciel prawny / Legal Representative</option>
+        </select>
+        
+        <label for="full_name">
+            Imię i nazwisko / pełna nazwa<span class="required">*</span>
+        </label>
+        <input type="text" 
+               id="full_name"
+               name="full_name" 
+               placeholder="Jan Kowalski / John Smith" 
+               required>
+        <div class="help-text">Imię, nazwisko lub pełna nazwa firmy / Full name or company name</div>
+        
+        <label for="contact_email">
+            Email kontaktowy<span class="required">*</span>
+        </label>
+        <input type="email" 
+               id="contact_email"
+               name="contact_email" 
+               placeholder="your@email.com" 
+               required>
+        <div class="help-text">Używamy tego adresu do korespondencji / We'll use this for correspondence</div>
+        
+        <label for="contact_phone">
+            Telefon kontaktowy (opcjonalnie)
+        </label>
+        <input type="tel" 
+               id="contact_phone"
+               name="contact_phone" 
+               placeholder="+48 123 456 789">
+        
+        <label for="address">
+            Adres / Address
+        </label>
+        <textarea id="address"
+                  name="address" 
+                  rows="3" 
+                  placeholder="Ulica, miasto, kod pocztowy, kraj
+Street, city, postal code, country"></textarea>
+
+        <h2>2. Identyfikacja Utworu / Work Identification</h2>
+        
+        <label for="work_description">
+            Opis utworu, którego prawa są naruszone<span class="required">*</span>
+        </label>
+        <textarea id="work_description"
+                  name="work_description" 
+                  rows="4" 
+                  placeholder="Dokładny opis Twojego utworu chronionego prawem autorskim. Przykład: 'Fotografia przedstawiająca...', 'Artykuł opublikowany w...', 'Utwór muzyczny pod tytułem...'"
+                  required></textarea>
+        <div class="help-text">Opisz dokładnie, jaki utwór jest chroniony / Describe the copyrighted work in detail</div>
+        
+        <label for="work_location">
+            Gdzie można znaleźć oryginał? (URL, publikacja)
+        </label>
+        <input type="text" 
+               id="work_location"
+               name="work_location" 
+               placeholder="https://yourwebsite.com/original-work">
+        <div class="help-text">Link do oryginalnej publikacji, jeśli dostępny / Link to original publication if available</div>
+
+        <h2>3. Naruszenie / Infringement</h2>
+        
+        <label for="infringing_cid">
+            IPFS CID naruszającej treści<span class="required">*</span>
+        </label>
+        <input type="text" 
+               id="infringing_cid"
+               name="infringing_cid" 
+               placeholder="Qm... lub bafybei..." 
+               pattern="[QqBb][a-zA-Z0-9]{44,}"
+               required>
+        <div class="help-text">Znajdź CID w adresie URL: ipfs.servebeer.com/ipfs/<strong>CID</strong></div>
+        
+        <label for="infringement_description">
+            Opis naruszenia<span class="required">*</span>
+        </label>
+        <textarea id="infringement_description"
+                  name="infringement_description" 
+                  rows="5" 
+                  placeholder="Wyjaśnij, w jaki sposób treść pod podanym CID narusza Twoje prawa autorskie. Czy to kopia? Przeróbka? Wykorzystanie bez zgody?"
+                  required></textarea>
+        <div class="help-text">Opisz dokładnie, jakie prawo zostało naruszone / Describe exactly how your rights are infringed</div>
+
+        <label for="legal_basis">
+            Podstawa prawna
+        </label>
+        <select id="legal_basis" name="legal_basis">
+            <option value="">-- Opcjonalnie / Optional --</option>
+            <option value="eu_directive">Dyrektywa UE 2001/29/WE</option>
+            <option value="pl_copyright">Polska ustawa o prawie autorskim</option>
+            <option value="other_eu">Inne prawo UE / Other EU law</option>
+            <option value="national">Prawo krajowe / National law</option>
+        </select>
+
+        <h2>4. Oświadczenia / Declarations</h2>
+        
+        <div class="checkbox-label">
+            <input type="checkbox" 
+                   id="rights_owner"
+                   name="rights_owner" 
+                   required>
+            <label for="rights_owner">
+                <strong>Oświadczam, że jestem właścicielem praw autorskich do opisanego utworu lub działam w imieniu właściciela.</strong><br>
+                <em>I declare that I am the copyright owner of the described work or act on behalf of the owner.</em>
+            </label>
+        </div>
+        
+        <div class="checkbox-label">
+            <input type="checkbox" 
+                   id="accuracy"
+                   name="accuracy" 
+                   required>
+            <label for="accuracy">
+                <strong>Oświadczam, że informacje w tym zgłoszeniu są dokładne i prawdziwe.</strong><br>
+                <em>I declare that the information in this report is accurate and true.</em>
+            </label>
+        </div>
+
+        <div class="checkbox-label">
+            <input type="checkbox" 
+                   id="understand_ipfs"
+                   name="understand_ipfs" 
+                   required>
+            <label for="understand_ipfs">
+                <strong>Rozumiem, że blokada w gateway ServeBeer nie usuwa treści z globalnej sieci IPFS.</strong><br>
+                <em>I understand that blocking in ServeBeer gateway does not remove content from the global IPFS network.</em>
+            </label>
+        </div>
+        
+        <label for="signature">
+            Podpis elektroniczny (wpisz pełne imię i nazwisko)<span class="required">*</span>
+        </label>
+        <input type="text" 
+               id="signature"
+               name="signature" 
+               placeholder="Jan Kowalski" 
+               required>
+        <div class="help-text">Wpisanie imienia i nazwiska stanowi podpis elektroniczny / Typing your name constitutes electronic signature</div>
+
+        <button type="submit">📧 Wyślij Zgłoszenie / Submit Report</button>
+    </form>
+    
+    <p style="text-align: center; margin-top: 30px; color: #95A5A6;">
+        <a href="/copyright" style="color: #4ecdc4;">← Wróć do Polityki / Back to Policy</a>
+    </p>
+
+    <div style="background: rgba(155, 89, 182, 0.1); padding: 20px; border-radius: 8px; margin-top: 30px; font-size: 14px; color: #BDC3C7;">
+        <strong>🔒 Prywatność / Privacy:</strong><br>
+        Dane osobowe przetwarzamy tylko w celu rozpatrzenia zgłoszenia, zgodnie z RODO/GDPR.<br>
+        <em>Personal data is processed only for handling the report, in accordance with GDPR.</em>
+    </div>
+</div>
+{% endblock %}
