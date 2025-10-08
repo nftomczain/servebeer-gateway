@@ -1,12 +1,12 @@
 # ServeBeer IPFS Gateway
 
-Public IPFS HTTP Gateway running on community-powered infrastructure. Decentralized content access with HTTPS, DMCA compliance, and minimal logging.
+Public IPFS HTTP Gateway running on community-powered infrastructure. Decentralized content access with HTTPS, DSA compliance, and minimal logging.
 
 ## Features
 
 - **IPFS/IPNS Gateway** - Access any IPFS content via HTTP/HTTPS
 - **SSL/TLS Support** - Secure access with Let's Encrypt certificates
-- **DMCA Compliant** - Takedown notice process with 48h response
+- **DSA Compliant** - Takedown notice process with 48h response
 - **Content Blacklist** - File-based CID blocking system
 - **GDPR Logging** - Minimal request logging for compliance
 - **Privacy-First** - No tracking, no analytics, no third-party cookies
@@ -180,13 +180,13 @@ Returns JSON with IPFS and database status.
 # - Blacklist hits
 ```
 
-## DMCA Compliance
+## DSA Compliance
 
 ### File Takedown Notice
 
-Users can file DMCA notices at:
+Users can file DSA notices at:
 ```
-https://your-domain.com/dmca/report
+https://your-domain.com/copyright/report
 ```
 
 Required information:
@@ -212,8 +212,8 @@ Required information:
 | `/ipfs/{cid}` | GET | IPFS content proxy |
 | `/ipns/{name}` | GET | IPNS content proxy |
 | `/health` | GET | Service health status |
-| `/dmca` | GET | DMCA policy page |
-| `/dmca/report` | GET/POST | DMCA report form |
+| `/copyright` | GET | Copyright policy page |
+| `/copyright/report` | GET/POST | Copyright report form |
 | `/terms` | GET | Terms of Service |
 | `/cookies` | GET | Cookie Policy |
 
@@ -233,8 +233,8 @@ servebeer-gateway/
 ├── templates/            # HTML templates
 │   ├── base.html
 │   ├── index.html
-│   ├── dmca.html
-│   ├── dmca_report.html
+│   ├── copyright.html
+│   ├── copyright_report.html
 │   ├── cookies.html
 │   └── terms.html
 ├── database/             # SQLite database (gitignored)
@@ -244,7 +244,7 @@ servebeer-gateway/
 ## Security Considerations
 
 - **Content Responsibility**: Gateway operator is not responsible for user content
-- **DMCA Protection**: Implement takedown process to maintain safe harbor
+- **DSA Protection**: Implement takedown process to maintain safe harbor
 - **Rate Limiting**: Consider adding Flask-Limiter for production
 - **Monitoring**: Regular log review recommended
 - **Blacklist**: Keep updated based on reports
