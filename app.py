@@ -16,7 +16,9 @@ import requests
 import os
 import sqlite3
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 
 from dotenv import load_dotenv
 import smtplib
@@ -247,7 +249,7 @@ def ipns_gateway(ipns_name):
 @app.route('/health')
 def health():
     """Basic health: check local IPFS HTTP gateway and DB connectivity"""
-    status = {'timestamp': datetime.now(datetime.UTC).isoformat(), 'ipfs': 'unknown', 'database': 'unknown'}
+    status = {'timestamp': datetime.now(timezone.utc).isoformat(), 'ipfs': 'unknown', 'database': 'unknown'}
     # check IPFS HTTP Gateway
     try:
         r = requests.get(f"{IPFS_HTTP_GATEWAY}/ipfs/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", timeout=4)
