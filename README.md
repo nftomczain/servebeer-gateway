@@ -56,10 +56,14 @@ nano .env  # Edit with your settings
 
 ```bash
 # Install IPFS Kubo
-wget https://dist.ipfs.tech/kubo/v0.24.0/kubo_v0.24.0_linux-amd64.tar.gz
-tar -xvzf kubo_v0.24.0_linux-amd64.tar.gz
+# wget https://dist.ipfs.tech/kubo/v0.24.0/kubo_v0.24.0_linux-amd64.tar.gz
+# tar -xvzf kubo_v0.24.0_linux-amd64.tar.gz
+# Install IPFS Kubo
+Follow the official installation guide for your architecture:
+https://docs.ipfs.tech/install/command-line/#install-official-binary-distributions
 cd kubo
 sudo bash install.sh
+**Note:** This gateway runs on Raspberry Pi (ARM64 architecture).
 
 # Initialize and start
 ipfs init
