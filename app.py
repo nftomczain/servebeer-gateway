@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-ServeBeer IPFS Gateway - Production Ready
+ServeBeer IPFS Gateway - Production Ready with Copyright Plugin System
 Features:
  - /ipfs/<path> and /ipns/<path> proxy to local IPFS daemon
- - Blacklist with reasons (malware, phishing, dmca, copyright, policy_violation)
- - Official IPFS denylist integration (auto-sync every 24h)
+ - Multi-jurisdiction copyright compliance (DMCA, DSA, French, Polish)
+ - Blacklist with reasons + Official IPFS denylist integration
  - HTTP 451 for blocked content
  - Audit logging to SQLite (GDPR-friendly)
- - DMCA/Copyright reporting system
+ - Copyright reporting system with country-specific plugins
  - Health check endpoint
- - Admin endpoints for blacklist management
+ - Admin endpoints for management
 """
 
 from flask import Flask, request, jsonify, Response, render_template_string, redirect, url_for, render_template
@@ -28,6 +28,9 @@ from dotenv import load_dotenv
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+# Import copyright plugin system
+from copyright_plugins import CopyrightPluginManager
+
 # --- Load environment variables ---
 load_dotenv()
 
@@ -37,6 +40,9 @@ APP_PORT = int(os.getenv('APP_PORT', '8081'))
 IPFS_HTTP_GATEWAY = os.getenv('IPFS_HTTP_GATEWAY', 'http://127.0.0.1:8080')
 DATABASE_PATH = os.getenv('DATABASE_PATH', 'database/servebeer.db')
 LOG_FILE = os.getenv('LOG_FILE', 'logs/servebeer_audit.log')
+
+# Copyright jurisdiction (US, EU, FR, PL)
+COPYRIGHT_COUNTRY = os.getenv('COPYRIGHT_COUNTRY', 'US')
 
 # DMCA email settings (optional)
 DMCA_SMTP_HOST = os.getenv('DMCA_SMTP_HOST', 'smtp.gmail.com')
@@ -54,6 +60,7 @@ BLACKLIST_CACHE_TIME = 300  # 5 minutes
 # Ensure folders exist
 os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True)
 os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+os.makedirs('copyright_plugins', exist_ok=True)
 
 app = Flask(__name__)
 app.config.update(
@@ -61,6 +68,9 @@ app.config.update(
     SESSION_COOKIE_SAMESITE='Lax',
     PERMANENT_SESSION_LIFETIME=timedelta(days=30)
 )
+
+# --- Copyright Plugin Manager ---
+copyright_manager = CopyrightPluginManager(default_country=COPYRIGHT_COUNTRY)
 
 # --- Logging setup ---
 logging.basicConfig(
@@ -129,7 +139,7 @@ def audit_log(event_type, user_id=None, ip_address=None, cid=None, details=None)
 
 @app.before_request
 def log_request_gdpr():
-    """Log requests to database (GDPR compliant - no PII except IP for security)"""
+    """Log requests to database (GDPR compliant)"""
     if request.endpoint and request.endpoint.startswith('static'):
         return
     try:
@@ -169,12 +179,8 @@ def download_ipfs_denylist():
             for line in r.text.split('\n'):
                 line = line.strip()
                 
-                # Parse Nginx location format:
-                # location ~ "^/ipfs/QmXXX" { return 410; }
-                # location ~ "^/ipns/QmXXX" { return 410; }
                 if 'location' in line and ('ipfs' in line or 'ipns' in line):
                     try:
-                        # Extract CID from location path
                         if '/ipfs/' in line:
                             cid = line.split('/ipfs/')[1].split('"')[0].split('/')[0]
                         elif '/ipns/' in line:
@@ -182,7 +188,6 @@ def download_ipfs_denylist():
                         else:
                             continue
                         
-                        # Validate CID format (basic check)
                         if cid and (cid.startswith('Qm') or cid.startswith('bafy') or cid.startswith('k51')):
                             f.write(f"{cid} ipfs-official-denylist\n")
                             cids_found += 1
@@ -232,11 +237,11 @@ def _cached_load_blacklist(cache_key):
         return {}
 
 def load_blacklist():
-    """Return blacklist with cache (refreshes every 5 min) - merged with IPFS official"""
+    """Return blacklist with cache - merged with IPFS official"""
     cache_key = int(time.time() / BLACKLIST_CACHE_TIME)
     local_blacklist = _cached_load_blacklist(cache_key)
     
-    # Merge with official IPFS denylist (if exists)
+    # Merge with official IPFS denylist
     try:
         if os.path.exists(IPFS_DENYLIST_FILE):
             with open(IPFS_DENYLIST_FILE, 'r') as f:
@@ -248,7 +253,6 @@ def load_blacklist():
                     cid = parts[0]
                     reason = parts[1] if len(parts) > 1 else 'ipfs-official-denylist'
                     
-                    # Don't overwrite local reasons (local blacklist has priority)
                     if cid not in local_blacklist:
                         local_blacklist[cid] = reason
     except Exception as e:
@@ -295,7 +299,10 @@ def proxy_ipfs_path(path, is_ipns=False, stream_timeout=120):
 # --- Routes ---
 @app.route('/')
 def index():
-    return render_template('index.html')
+    plugin = copyright_manager.get_active()
+    footer = plugin.get_footer_html() if plugin else ""
+    
+    return render_template('index.html', footer=footer)
 
 @app.route('/ipfs/', defaults={'ipfs_path': None})
 @app.route('/ipfs/<path:ipfs_path>')
@@ -306,7 +313,7 @@ def ipfs_gateway(ipfs_path):
         if not ipfs_path:
             return redirect(url_for('index'))
 
-    # Extract CID (first part of path)
+    # Extract CID
     cid = ipfs_path.split('/')[0]
     audit_log('CID_ACCESS', ip_address=request.remote_addr, cid=cid, details=f"path={ipfs_path}")
 
@@ -317,33 +324,40 @@ def ipfs_gateway(ipfs_path):
         audit_log('BLACKLIST_HIT', ip_address=request.remote_addr, 
                  cid=cid, details=f"blocked: {reason}")
         
-        # Map reasons to Polish
-        reason_pl = {
-            'malware': 'Wykryto złośliwe oprogramowanie',
-            'phishing': 'Próba wyłudzenia danych (phishing)',
-            'dmca': 'Naruszenie praw autorskich (DMCA)',
-            'copyright': 'Naruszenie praw autorskich',
-            'policy_violation': 'Naruszenie regulaminu',
-            'ipfs-official-denylist': 'Zablokowane przez oficjalną listę IPFS'
-        }
+        # Get localized blocked page from plugin
+        plugin = copyright_manager.get_active()
+        if plugin:
+            blocked_text = plugin.get_blocked_page_text(reason, language='pl')
+        else:
+            blocked_text = {
+                'title': '451 - Content Blocked',
+                'message': 'This content has been blocked.',
+                'reason': reason
+            }
         
         return render_template_string("""
         <!doctype html><html><head>
         <meta charset="utf-8">
-        <title>451 - Blocked</title>
+        <title>{{ title }}</title>
         <link rel="icon" href="data:,">
         </head>
         <body style="font-family:Arial;text-align:center;padding:60px;background:#2c3e50;color:#ecf0f1;">
-        <h1 style="color:#e74c3c">⛔ 451 - Content Blocked</h1>
-        <p><strong>Powód:</strong> {{ reason_text }}</p>
+        <h1 style="color:#e74c3c">⛔ {{ title }}</h1>
+        <p>{{ message }}</p>
+        <p><strong>Powód:</strong> {{ reason }}</p>
         <p>Treść z CID <code>{{ cid }}</code> została zablokowana.</p>
-        <p><a href="/copyright" style="color:#4ecdc4">Zgłoś DMCA / sprawdź procedury</a></p>
+        {% if law %}<p><small>{{ law }}</small></p>{% endif %}
+        <p><a href="/copyright" style="color:#4ecdc4">Informacje o zgłaszaniu naruszeń</a></p>
         <hr>
         <small>Reference: {{ request_id }}</small>
         </body></html>
-        """, reason_text=reason_pl.get(reason, reason), 
-             cid=cid, 
-             request_id=uuid.uuid4().hex[:8]), 451
+        """, 
+        title=blocked_text.get('title'),
+        message=blocked_text.get('message'),
+        reason=blocked_text.get('reason'),
+        law=blocked_text.get('law'),
+        cid=cid, 
+        request_id=uuid.uuid4().hex[:8]), 451
 
     return proxy_ipfs_path(ipfs_path, is_ipns=False)
 
@@ -355,12 +369,13 @@ def ipns_gateway(ipns_name):
 
 @app.route('/health')
 def health():
-    """Health check: IPFS daemon and database connectivity"""
+    """Health check: IPFS daemon, database, and blacklist"""
     status = {
         'timestamp': datetime.now(timezone.utc).isoformat(),
         'ipfs': 'unknown',
         'database': 'unknown',
-        'blacklist': 0
+        'blacklist': 0,
+        'copyright_jurisdiction': copyright_manager.get_active().country_code if copyright_manager.get_active() else 'none'
     }
     
     # Check IPFS
@@ -391,14 +406,11 @@ def health():
 # --- Admin endpoints ---
 @app.route('/admin/reload-blacklist', methods=['POST'])
 def reload_blacklist():
-    """Force reload blacklist (clears cache)"""
+    """Force reload blacklist"""
     _cached_load_blacklist.cache_clear()
     new_blacklist = load_blacklist()
     audit_log('BLACKLIST_RELOAD', details=f"Reloaded {len(new_blacklist)} CIDs")
-    return jsonify({
-        "status": "reloaded",
-        "count": len(new_blacklist)
-    }), 200
+    return jsonify({"status": "reloaded", "count": len(new_blacklist)}), 200
 
 @app.route('/admin/sync-ipfs-denylist', methods=['POST'])
 def sync_ipfs_denylist():
@@ -416,17 +428,13 @@ def sync_ipfs_denylist():
             "timestamp": datetime.now(timezone.utc).isoformat()
         }), 200
     else:
-        return jsonify({
-            "status": "error",
-            "message": "Failed to download IPFS denylist"
-        }), 500
+        return jsonify({"status": "error", "message": "Failed to download IPFS denylist"}), 500
 
 @app.route('/admin/blacklist-stats')
 def blacklist_stats():
     """Blacklist statistics"""
     blacklist = load_blacklist()
     
-    # Count by reason
     reasons = {}
     for reason in blacklist.values():
         reasons[reason] = reasons.get(reason, 0) + 1
@@ -439,7 +447,7 @@ def blacklist_stats():
 
 @app.route('/admin/test-blacklist/<cid>')
 def test_blacklist(cid):
-    """Test if CID is on blacklist"""
+    """Test if CID is blocked"""
     blacklist = load_blacklist()
     is_blocked = cid in blacklist
     reason = blacklist.get(cid, 'not found')
@@ -448,9 +456,193 @@ def test_blacklist(cid):
         'cid': cid,
         'blocked': is_blocked,
         'reason': reason,
-        'total_blacklisted': len(blacklist),
-        'sample_cids': list(blacklist.keys())[:5]
+        'total_blacklisted': len(blacklist)
     })
+
+@app.route('/admin/set-jurisdiction/<country_code>', methods=['POST'])
+def set_jurisdiction(country_code):
+    """Change active copyright jurisdiction"""
+    success = copyright_manager.set_country(country_code.upper())
+    
+    if success:
+        plugin = copyright_manager.get_active()
+        audit_log('JURISDICTION_CHANGED', details=f"Changed to {country_code} - {plugin.law_name}")
+        return jsonify({
+            'status': 'success',
+            'country': plugin.country_code,
+            'law': plugin.law_name,
+            'reference': plugin.law_reference
+        }), 200
+    else:
+        return jsonify({
+            'status': 'error',
+            'message': f'Plugin for {country_code} not found'
+        }), 404
+
+@app.route('/admin/list-jurisdictions')
+def list_jurisdictions():
+    """List all available copyright jurisdictions"""
+    jurisdictions = copyright_manager.list_available()
+    active = copyright_manager.get_active()
+    
+    return jsonify({
+        'available': jurisdictions,
+        'active': active.country_code if active else None
+    })
+
+# --- Copyright/DMCA pages ---
+@app.route('/copyright')
+def copyright_policy():
+    """Copyright policy page with jurisdiction-specific information"""
+    plugin = copyright_manager.get_active()
+    
+    if not plugin:
+        return "No copyright plugin active", 500
+    
+    template = plugin.get_notice_template()
+    footer = plugin.get_footer_html()
+    
+    return render_template_string("""
+    <!doctype html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <title>Copyright Policy - {{ law_name }}</title>
+        <style>
+            body { font-family: Arial; max-width: 900px; margin: 40px auto; 
+                   background: #2c3e50; color: #ecf0f1; padding: 30px; }
+            h1 { color: #4ecdc4; }
+            h2 { color: #e74c3c; margin-top: 30px; }
+            pre { background: #34495e; padding: 20px; border-radius: 5px; 
+                  overflow-x: auto; white-space: pre-wrap; }
+            a { color: #4ecdc4; }
+            .badge { margin: 30px 0; }
+        </style>
+    </head>
+    <body>
+        <h1>Copyright Compliance Policy</h1>
+        <p><strong>Jurisdiction:</strong> {{ country }} - {{ law_name }}</p>
+        <p><strong>Legal Reference:</strong> {{ law_reference }}</p>
+        
+        <h2>How to Report Copyright Infringement</h2>
+        <p><a href="/copyright/report" style="font-size: 18px; font-weight: bold;">
+            📝 Submit Copyright Report</a></p>
+        
+        <h2>Notice Template</h2>
+        <pre>{{ template }}</pre>
+        
+        <div class="badge">{{ footer | safe }}</div>
+        
+        <p><a href="/">← Back to Home</a></p>
+    </body>
+    </html>
+    """, 
+    country=plugin.country_code,
+    law_name=plugin.law_name,
+    law_reference=plugin.law_reference,
+    template=template,
+    footer=footer)
+
+@app.route('/copyright/report', methods=['GET', 'POST'])
+def copyright_report():
+    """Copyright takedown notice submission"""
+    plugin = copyright_manager.get_active()
+    
+    if not plugin:
+        return "No copyright plugin active", 500
+    
+    if request.method == 'GET':
+        template = plugin.get_notice_template()
+        required_fields = plugin.get_required_fields()
+        
+        return render_template_string("""
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Report Copyright Infringement</title>
+            <style>
+                body { font-family: Arial; max-width: 900px; margin: 40px auto;
+                       background: #2c3e50; color: #ecf0f1; padding: 30px; }
+                h1 { color: #e74c3c; }
+                label { display: block; margin-top: 20px; color: #4ecdc4; font-weight: bold; }
+                input, textarea { width: 100%; padding: 10px; margin-top: 5px;
+                                 background: #34495e; border: none; color: #ecf0f1;
+                                 border-radius: 5px; }
+                button { background: #e74c3c; color: white; padding: 15px 30px;
+                        border: none; border-radius: 5px; margin-top: 30px;
+                        cursor: pointer; font-size: 16px; font-weight: bold; }
+                button:hover { background: #c0392b; }
+                .info { background: rgba(52, 152, 219, 0.2); padding: 15px;
+                       border-radius: 5px; margin: 20px 0; }
+            </style>
+        </head>
+        <body>
+            <h1>Report Copyright Infringement</h1>
+            <div class="info">
+                <strong>Jurisdiction:</strong> {{ country }} - {{ law }}<br>
+                <strong>Response Time:</strong> {{ sla }} hours
+            </div>
+            
+            <form method="POST">
+                {% for field in fields %}
+                <label for="{{ field }}">{{ field | replace('_', ' ') | title }}*</label>
+                {% if 'description' in field or 'statement' in field or 'justification' in field %}
+                <textarea name="{{ field }}" id="{{ field }}" rows="4" required></textarea>
+                {% else %}
+                <input type="text" name="{{ field }}" id="{{ field }}" required>
+                {% endif %}
+                {% endfor %}
+                
+                <button type="submit">Submit Report</button>
+            </form>
+            
+            <p style="margin-top: 30px;"><a href="/copyright" style="color:#4ecdc4;">← View Full Template</a></p>
+        </body>
+        </html>
+        """,
+        country=plugin.country_code,
+        law=plugin.law_name,
+        sla=plugin.get_sla_hours(),
+        fields=required_fields)
+    
+    # POST handling
+    notice_data = request.form.to_dict()
+    notice_data['timestamp'] = datetime.now(timezone.utc).isoformat()
+    notice_data['reference_id'] = f"{plugin.country_code}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+    
+    # Validate using plugin
+    is_valid, error = plugin.validate_notice(notice_data)
+    
+    if not is_valid:
+        return jsonify({'error': error}), 400
+    
+    # Log to audit
+    audit_log('COPYRIGHT_REPORT',
+             ip_address=request.remote_addr,
+             cid=notice_data.get('infringing_cid'),
+             details={'jurisdiction': plugin.country_code, **notice_data})
+    
+    # Send email if configured
+    if DMCA_SMTP_USER and DMCA_SMTP_PASS:
+        send_copyright_mail(notice_data, plugin)
+    
+    return render_template_string("""
+    <!doctype html>
+    <html>
+    <head><meta charset="utf-8"><title>Report Submitted</title></head>
+    <body style="font-family:Arial;max-width:900px;margin:40px auto;background:#2c3e50;color:#ecf0f1;padding:40px;">
+    <h1 style="color:#4ecdc4;">Copyright Report Submitted</h1>
+    <p><strong>Reference ID:</strong> {{ ref }}</p>
+    <p><strong>Jurisdiction:</strong> {{ jurisdiction }}</p>
+    <p>We will review and respond within <strong>{{ sla }} hours</strong>.</p>
+    <p><a href="/" style="color:#4ecdc4;">← Back to Home</a></p>
+    </body>
+    </html>
+    """, 
+    ref=notice_data['reference_id'],
+    jurisdiction=f"{plugin.country_code} ({plugin.law_name})",
+    sla=plugin.get_sla_hours())
 
 # --- Static pages ---
 @app.route('/terms')
@@ -460,47 +652,6 @@ def terms():
 @app.route('/cookies')
 def cookies():
     return render_template('cookies.html')
-
-@app.route('/copyright')
-def copyright_policy():
-    return render_template('copyright.html')
-
-@app.route('/copyright/report', methods=['GET', 'POST'])
-def copyright_report():
-    """DMCA/Copyright takedown notice submission"""
-    if request.method == 'GET':
-        return render_template('copyright_report.html')
-    
-    # POST handling
-    data = {
-        'copyright_owner': request.form.get('copyright_owner'),
-        'contact_email': request.form.get('contact_email'),
-        'infringing_cid': request.form.get('infringing_cid'),
-        'description': request.form.get('description'),
-        'signature': request.form.get('signature'),
-        'timestamp': datetime.now(timezone.utc).isoformat()
-    }
-    
-    audit_log('DMCA_REPORT', ip_address=request.remote_addr, 
-             cid=data.get('infringing_cid'), details=data)
-    
-    # Send email if configured
-    sent = False
-    if DMCA_SMTP_USER and DMCA_SMTP_PASS and DMCA_NOTIFY_TO:
-        sent = send_dmca_mail(data)
-    
-    return render_template_string("""
-    <!doctype html>
-    <html>
-    <head><meta charset="utf-8"><title>Copyright Notice Submitted</title></head>
-    <body style="font-family:Arial;max-width:900px;margin:40px auto;background:#2c3e50;color:#ecf0f1;padding:40px;">
-    <h1>Copyright Notice Submitted</h1>
-    <p>Reference: {{ref}}</p>
-    <p>We will review and respond within 48 hours.</p>
-    <p><a href="/" style="color:#4ecdc4;">Home</a></p>
-    </body>
-    </html>
-    """, ref=f"DMCA-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}")
 
 # --- Helper functions ---
 def create_ssl_context():
@@ -515,25 +666,29 @@ def create_ssl_context():
     context.load_cert_chain(cert_path, key_path)
     return context
 
-def send_dmca_mail(data):
-    """Send DMCA email notification"""
+def send_copyright_mail(data, plugin):
+    """Send copyright notice email"""
     try:
         msg = MIMEMultipart()
-        msg['From'] = data.get('contact_email')
+        msg['From'] = data.get('contact_email', DMCA_SMTP_USER)
         msg['To'] = DMCA_NOTIFY_TO
-        msg['Subject'] = f"DMCA Notice - {data.get('infringing_cid', '')[:12]}"
+        msg['Subject'] = f"Copyright Notice [{plugin.country_code}] - {data.get('infringing_cid', '')[:12]}"
 
-        body = f"""DMCA NOTICE RECEIVED
+        body = f"""COPYRIGHT NOTICE RECEIVED
 
+Jurisdiction: {plugin.country_code} - {plugin.law_name}
+Legal Reference: {plugin.law_reference}
+Reference ID: {data.get('reference_id')}
 Timestamp: {data.get('timestamp')}
-Copyright owner: {data.get('copyright_owner')}
+
 Contact: {data.get('contact_email')}
 CID: {data.get('infringing_cid')}
-Description:
-{data.get('description')}
 
-Signature:
-{data.get('signature')}
+Full Details:
+{str(data)}
+
+---
+Response required within {plugin.get_sla_hours()} hours.
 """
         msg.attach(MIMEText(body, 'plain'))
 
@@ -543,39 +698,44 @@ Signature:
         server.send_message(msg)
         server.quit()
 
-        logging.info("DMCA email sent to %s", DMCA_NOTIFY_TO)
+        logging.info(f"Copyright notice email sent [{plugin.country_code}] to {DMCA_NOTIFY_TO}")
         return True
     except Exception as e:
-        logging.error(f"Failed to send DMCA email: {e}")
+        logging.error(f"Failed to send copyright email: {e}")
         return False
 
 # --- Main ---
 if __name__ == '__main__':
     setup_database()
     
-    # Download IPFS official denylist on startup if missing or old
+    # Download IPFS denylist on startup
     if not os.path.exists(IPFS_DENYLIST_FILE):
         logging.info("IPFS official denylist not found, downloading...")
         download_ipfs_denylist()
     else:
-        # Check if file is older than 24h
         file_age = time.time() - os.path.getmtime(IPFS_DENYLIST_FILE)
-        if file_age > 86400:  # 24 hours
+        if file_age > 86400:
             logging.info("IPFS official denylist older than 24h, updating...")
             download_ipfs_denylist()
     
-    # Start scheduled denylist update in background
+    # Start background denylist updater
     update_thread = threading.Thread(target=scheduled_denylist_update, daemon=True)
     update_thread.start()
     logging.info("Started background denylist updater (24h interval)")
     
     logging.info("Starting IPFS Gateway Flask app")
-    audit_log('SERVICE_STARTUP', details={'host': APP_HOST, 'port': APP_PORT})
+    audit_log('SERVICE_STARTUP', details={
+        'host': APP_HOST, 
+        'port': APP_PORT,
+        'copyright_jurisdiction': COPYRIGHT_COUNTRY
+    })
     
     ssl_ctx = create_ssl_context()
     if ssl_ctx:
-        print("🔒 Starting with SSL on port 443...")
+        print(f"🔒 Starting with SSL on port 443...")
+        print(f"📋 Copyright jurisdiction: {COPYRIGHT_COUNTRY}")
         app.run(host='0.0.0.0', port=443, ssl_context=ssl_ctx, debug=False)
     else:
         print(f"🌐 Starting HTTP on port {APP_PORT}...")
+        print(f"📋 Copyright jurisdiction: {COPYRIGHT_COUNTRY}")
         app.run(host=APP_HOST, port=APP_PORT, debug=False)
