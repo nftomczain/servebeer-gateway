@@ -1,3 +1,5 @@
+# ServeBeer IPFS Gateway - Git Ignore
+
 # Python
 __pycache__/
 *.py[cod]
@@ -7,25 +9,53 @@ __pycache__/
 venv/
 env/
 ENV/
+*.egg-info/
+dist/
+build/
+
+# Environment & Secrets
+.env
+*.key
+*.pem
+*.crt
 
 # Database
 database/
 *.db
 *.db-journal
+*.sqlite
+*.sqlite3
 
 # Logs
 logs/
 *.log
 
-# Environment
-.env
+# Official IPFS denylist (auto-generated, don't commit)
+blacklist-ipfs-official.txt
 
-# OS
-.DS_Store
-Thumbs.db
+# Local blacklist - COMMIT THIS
+# blacklist.txt should be committed with your custom blocks
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Certificates (NEVER commit!)
+cert/
+certs/
+*.crt
+*.key
+fullchain.pem
+privkey.pem
+
+# Backup files
+*.backup
+*.bak

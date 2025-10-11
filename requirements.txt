@@ -1,4 +1,21 @@
+# ServeBeer IPFS Gateway - Python Dependencies
+
+# Core Framework
 Flask==3.0.3
+
+# HTTP Requests (for IPFS proxy and denylist sync)
 requests==2.32.3
+
+# Environment Configuration
 python-dotenv==1.0.1
+
+# Optional: Rate Limiting (recommended for production)
 Flask-Limiter==3.5.0
+
+# Note: The following are built-in Python modules (no installation needed):
+# - sqlite3 (database)
+# - ssl (HTTPS support)
+# - smtplib (email notifications)
+# - threading (background denylist sync)
+# - logging (audit logs)
+# - datetime, time, uuid, os, functools
