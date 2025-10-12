@@ -13,6 +13,7 @@ Features:
 """
 
 from flask import Flask, request, jsonify, Response, render_template_string, redirect, url_for, render_template
+from werkzeug.http import HTTP_STATUS_CODES
 import requests
 import os
 import sqlite3
@@ -27,6 +28,9 @@ from functools import lru_cache
 from dotenv import load_dotenv
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
+# Register HTTP 451 status code with Werkzeug
+HTTP_STATUS_CODES[451] = 'Unavailable For Legal Reasons'
 
 # Import copyright plugin system
 from copyright_plugins import CopyrightPluginManager
@@ -56,6 +60,12 @@ BLACKLIST_FILE = os.getenv('BLACKLIST_FILE', 'blacklist.txt')
 IPFS_DENYLIST_FILE = os.getenv('IPFS_DENYLIST_FILE', 'blacklist-ipfs-official.txt')
 IPFS_DENYLIST_URL = "https://raw.githubusercontent.com/ipfs/infra/master/ipfs/gateway/denylist.conf"
 BLACKLIST_CACHE_TIME = 300  # 5 minutes
+
+# Ensure blacklist files exist
+if not os.path.exists(BLACKLIST_FILE):
+    with open(BLACKLIST_FILE, 'w') as f:
+        f.write("# Local blacklist - one CID per line\n")
+        f.write("# Format: CID reason\n")
 
 # Ensure folders exist
 os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True)
@@ -161,7 +171,7 @@ def log_request_gdpr():
 
 # --- IPFS Official Denylist Integration ---
 def download_ipfs_denylist():
-    """Download and parse official IPFS denylist from Nginx format to CIDs"""
+    """Download and parse official IPFS denylist from Nginx config format"""
     try:
         logging.info(f"Downloading IPFS official denylist from {IPFS_DENYLIST_URL}")
         r = requests.get(IPFS_DENYLIST_URL, timeout=30)
@@ -170,33 +180,49 @@ def download_ipfs_denylist():
             logging.error(f"Failed to download denylist: HTTP {r.status_code}")
             return False
         
+        logging.info(f"Downloaded {len(r.text)} bytes from IPFS denylist")
+        
         cids_found = 0
+        lines_processed = 0
+        
         with open(IPFS_DENYLIST_FILE, 'w') as f:
             f.write("# IPFS Official Denylist - Auto-generated\n")
             f.write(f"# Source: {IPFS_DENYLIST_URL}\n")
             f.write(f"# Downloaded: {datetime.now(timezone.utc).isoformat()}\n\n")
             
             for line in r.text.split('\n'):
+                lines_processed += 1
                 line = line.strip()
                 
-                if 'location' in line and ('ipfs' in line or 'ipns' in line):
+                # Look for location blocks with ipfs/ipns paths
+                # Format: location ~ "^/ipfs/QmXXXX" {
+                if 'location' in line and ('"/ipfs/' in line or '"/ipns/' in line):
                     try:
-                        if '/ipfs/' in line:
-                            cid = line.split('/ipfs/')[1].split('"')[0].split('/')[0]
-                        elif '/ipns/' in line:
-                            cid = line.split('/ipns/')[1].split('"')[0].split('/')[0]
+                        # Extract CID from regex pattern
+                        if '"/ipfs/' in line:
+                            cid = line.split('"/ipfs/')[1].split('"')[0].split('/')[0]
+                        elif '"/ipns/' in line:
+                            cid = line.split('"/ipns/')[1].split('"')[0].split('/')[0]
                         else:
                             continue
                         
-                        if cid and (cid.startswith('Qm') or cid.startswith('bafy') or cid.startswith('k51')):
-                            f.write(f"{cid} ipfs-official-denylist\n")
+                        # Validate CID format (basic check)
+                        if cid and len(cid) > 10 and (cid.startswith('Qm') or cid.startswith('bafy') or cid.startswith('k51')):
+                            # Extract reason from comment above (if present)
+                            reason = 'ipfs-official-denylist'
+                            f.write(f"{cid} {reason}\n")
                             cids_found += 1
+                            
                     except (IndexError, ValueError) as e:
-                        logging.debug(f"Could not parse line: {line} - {e}")
+                        logging.debug(f"Could not parse line {lines_processed}: {line[:50]} - {e}")
                         continue
         
-        logging.info(f"Successfully downloaded {cids_found} CIDs from IPFS official denylist")
-        audit_log('IPFS_DENYLIST_SYNC', details=f"Downloaded {cids_found} CIDs")
+        logging.info(f"Successfully parsed {cids_found} CIDs from {lines_processed} lines")
+        audit_log('IPFS_DENYLIST_SYNC', details={
+            'cids_found': cids_found,
+            'lines_processed': lines_processed,
+            'file': IPFS_DENYLIST_FILE
+        })
         return True
         
     except requests.exceptions.RequestException as e:
@@ -204,6 +230,8 @@ def download_ipfs_denylist():
         return False
     except Exception as e:
         logging.error(f"Error processing IPFS denylist: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
         return False
 
 def scheduled_denylist_update():
@@ -324,40 +352,128 @@ def ipfs_gateway(ipfs_path):
         audit_log('BLACKLIST_HIT', ip_address=request.remote_addr, 
                  cid=cid, details=f"blocked: {reason}")
         
-        # Get localized blocked page from plugin
-        plugin = copyright_manager.get_active()
-        if plugin:
-            blocked_text = plugin.get_blocked_page_text(reason, language='pl')
-        else:
+        # Get localized blocked page from plugin (with fallback)
+        try:
+            plugin = copyright_manager.get_active()
+            if plugin:
+                blocked_text = plugin.get_blocked_page_text(reason, language='pl')
+            else:
+                raise Exception("No plugin available")
+        except Exception as e:
+            logging.warning(f"Could not get blocked page text from plugin: {e}")
             blocked_text = {
                 'title': '451 - Content Blocked',
-                'message': 'This content has been blocked.',
-                'reason': reason
+                'message': 'This content has been blocked due to legal reasons.',
+                'reason': reason,
+                'law': None
             }
         
-        return render_template_string("""
+        # Render template
+        html_content = render_template_string("""
         <!doctype html><html><head>
         <meta charset="utf-8">
         <title>{{ title }}</title>
-        <link rel="icon" href="data:,">
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: #2c3e50;
+                color: #ecf0f1;
+                text-align: center;
+                padding: 60px 20px;
+                margin: 0;
+            }
+            h1 {
+                color: #e74c3c;
+                font-size: 4em;
+                margin: 0;
+            }
+            .subtitle {
+                color: #95a5a6;
+                font-size: 1.2em;
+                margin: 20px 0;
+            }
+            .cid-box {
+                background: #34495e;
+                padding: 20px;
+                border-radius: 8px;
+                font-family: monospace;
+                word-break: break-all;
+                margin: 30px auto;
+                max-width: 600px;
+                font-size: 0.9em;
+            }
+            .reason-box {
+                background: rgba(231, 76, 60, 0.2);
+                padding: 15px;
+                border-radius: 8px;
+                margin: 20px auto;
+                max-width: 600px;
+                border: 2px solid #e74c3c;
+            }
+            a {
+                color: #4ecdc4;
+                text-decoration: none;
+                font-weight: bold;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+            .actions {
+                margin-top: 40px;
+            }
+            .ref {
+                margin-top: 60px;
+                color: #7f8c8d;
+                font-size: 0.8em;
+            }
+        </style>
         </head>
-        <body style="font-family:Arial;text-align:center;padding:60px;background:#2c3e50;color:#ecf0f1;">
-        <h1 style="color:#e74c3c">⛔ {{ title }}</h1>
+        <body>
+        <h1>⛔ 451</h1>
+        <div class="subtitle">{{ title }}</div>
+        
+        <div class="reason-box">
+            <strong>Reason:</strong> {{ reason }}
+        </div>
+        
+        <div class="cid-box">
+            <strong>Blocked CID:</strong><br>
+            {{ cid }}
+        </div>
+        
         <p>{{ message }}</p>
-        <p><strong>Powód:</strong> {{ reason }}</p>
-        <p>Treść z CID <code>{{ cid }}</code> została zablokowana.</p>
-        {% if law %}<p><small>{{ law }}</small></p>{% endif %}
-        <p><a href="/copyright" style="color:#4ecdc4">Informacje o zgłaszaniu naruszeń</a></p>
-        <hr>
-        <small>Reference: {{ request_id }}</small>
+        
+        {% if law %}
+        <p style="font-size: 0.9em; color: #95a5a6;">{{ law }}</p>
+        {% endif %}
+        
+        <div class="actions">
+            <a href="/copyright">📋 Learn about our copyright policy</a>
+            <span style="color: #7f8c8d;"> | </span>
+            <a href="/">🏠 Return home</a>
+        </div>
+        
+        <div class="ref">
+            Reference: {{ request_id }}
+        </div>
         </body></html>
         """, 
-        title=blocked_text.get('title'),
-        message=blocked_text.get('message'),
-        reason=blocked_text.get('reason'),
+        title=blocked_text.get('title', '451 - Content Blocked'),
+        message=blocked_text.get('message', 'This content has been blocked.'),
+        reason=blocked_text.get('reason', reason),
         law=blocked_text.get('law'),
         cid=cid, 
-        request_id=uuid.uuid4().hex[:8]), 451
+        request_id=uuid.uuid4().hex[:8])
+        
+        # Create response with explicit headers
+        response = Response(html_content, status=451, mimetype='text/html')
+        response.status_code = 451
+        response.status = '451 Unavailable For Legal Reasons'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        response.headers['Content-Length'] = str(len(html_content.encode('utf-8')))
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['X-Content-Blocked'] = '451-unavailable-for-legal-reasons'
+        return response
 
     return proxy_ipfs_path(ipfs_path, is_ipns=False)
 
@@ -444,6 +560,191 @@ def blacklist_stats():
         "by_reason": reasons,
         "sample_cids": list(blacklist.keys())[:10]
     })
+
+@app.route('/admin/test-denylist-download')
+def test_denylist_download():
+    """Test download and parsing of IPFS official denylist"""
+    import tempfile
+    
+    try:
+        # Download to temp file for testing
+        r = requests.get(IPFS_DENYLIST_URL, timeout=30)
+        
+        if r.status_code != 200:
+            return jsonify({
+                'error': f'HTTP {r.status_code}',
+                'url': IPFS_DENYLIST_URL
+            }), 500
+        
+        # Parse in memory
+        cids_found = []
+        lines_processed = 0
+        
+        for line in r.text.split('\n'):
+            lines_processed += 1
+            line = line.strip()
+            
+            if 'location' in line and ('"/ipfs/' in line or '"/ipns/' in line):
+                try:
+                    if '"/ipfs/' in line:
+                        cid = line.split('"/ipfs/')[1].split('"')[0].split('/')[0]
+                    elif '"/ipns/' in line:
+                        cid = line.split('"/ipns/')[1].split('"')[0].split('/')[0]
+                    else:
+                        continue
+                    
+                    if cid and len(cid) > 10:
+                        cids_found.append(cid)
+                except:
+                    continue
+        
+        return jsonify({
+            'status': 'success',
+            'url': IPFS_DENYLIST_URL,
+            'bytes_downloaded': len(r.text),
+            'lines_processed': lines_processed,
+            'cids_found': len(cids_found),
+            'sample_cids': cids_found[:10],
+            'current_file': IPFS_DENYLIST_FILE,
+            'current_file_exists': os.path.exists(IPFS_DENYLIST_FILE)
+        })
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+@app.route('/admin/test-blocked-page/<cid>')
+def test_blocked_page(cid):
+    """Test what the blocked page returns"""
+    blacklist = load_blacklist()
+    
+    # Force block this CID for testing
+    reason = blacklist.get(cid, 'test-block')
+    
+    # Same logic as ipfs_gateway
+    try:
+        plugin = copyright_manager.get_active()
+        if plugin:
+            blocked_text = plugin.get_blocked_page_text(reason, language='pl')
+        else:
+            raise Exception("No plugin available")
+    except Exception as e:
+        blocked_text = {
+            'title': '451 - Content Blocked',
+            'message': 'This content has been blocked due to legal reasons.',
+            'reason': reason,
+            'law': None
+        }
+    
+    # Render template
+    html_content = render_template_string("""
+    <!doctype html><html><head>
+    <meta charset="utf-8">
+    <title>{{ title }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #2c3e50;
+            color: #ecf0f1;
+            text-align: center;
+            padding: 60px 20px;
+            margin: 0;
+        }
+        h1 {
+            color: #e74c3c;
+            font-size: 4em;
+            margin: 0;
+        }
+        .subtitle {
+            color: #95a5a6;
+            font-size: 1.2em;
+            margin: 20px 0;
+        }
+        .cid-box {
+            background: #34495e;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 30px auto;
+            max-width: 600px;
+            font-size: 0.9em;
+        }
+        .reason-box {
+            background: rgba(231, 76, 60, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px auto;
+            max-width: 600px;
+            border: 2px solid #e74c3c;
+        }
+        a {
+            color: #4ecdc4;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .actions {
+            margin-top: 40px;
+        }
+        .ref {
+            margin-top: 60px;
+            color: #7f8c8d;
+            font-size: 0.8em;
+        }
+    </style>
+    </head>
+    <body>
+    <h1>⛔ 451</h1>
+    <div class="subtitle">{{ title }}</div>
+    
+    <div class="reason-box">
+        <strong>Reason:</strong> {{ reason }}
+    </div>
+    
+    <div class="cid-box">
+        <strong>Blocked CID:</strong><br>
+        {{ cid }}
+    </div>
+    
+    <p>{{ message }}</p>
+    
+    {% if law %}
+    <p style="font-size: 0.9em; color: #95a5a6;">{{ law }}</p>
+    {% endif %}
+    
+    <div class="actions">
+        <a href="/copyright">📋 Learn about our copyright policy</a>
+        <span style="color: #7f8c8d;"> | </span>
+        <a href="/">🏠 Return home</a>
+    </div>
+    
+    <div class="ref">
+        Reference: {{ request_id }} (TEST MODE)
+    </div>
+    </body></html>
+    """, 
+    title=blocked_text.get('title', '451 - Content Blocked'),
+    message=blocked_text.get('message', 'This content has been blocked.'),
+    reason=blocked_text.get('reason', reason),
+    law=blocked_text.get('law'),
+    cid=cid, 
+    request_id=uuid.uuid4().hex[:8])
+    
+    # Create response with explicit headers
+    response = Response(html_content, status=451, mimetype='text/html')
+    response.status_code = 451
+    response.status = '451 Unavailable For Legal Reasons'
+    response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    response.headers['Content-Length'] = str(len(html_content.encode('utf-8')))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['X-Content-Blocked'] = '451-test-mode'
+    return response
 
 @app.route('/admin/test-blacklist/<cid>')
 def test_blacklist(cid):
@@ -656,15 +957,33 @@ def cookies():
 # --- Helper functions ---
 def create_ssl_context():
     """Create SSL context for HTTPS"""
-    cert_path = '/home/premp/cert/fullchain.pem'
-    key_path = '/home/premp/cert/privkey.pem'
+    # Try multiple certificate locations
+    cert_locations = [
+        ('/home/premp/cert/fullchain.pem', '/home/premp/cert/privkey.pem'),
+        ('/etc/letsencrypt/live/ipfs.servebeer.com/fullchain.pem', '/etc/letsencrypt/live/ipfs.servebeer.com/privkey.pem'),
+        ('/etc/letsencrypt/live/servebeer.com/fullchain.pem', '/etc/letsencrypt/live/servebeer.com/privkey.pem'),
+    ]
     
-    if not os.path.exists(cert_path) or not os.path.exists(key_path):
-        return None
+    for cert_path, key_path in cert_locations:
+        if os.path.exists(cert_path) and os.path.exists(key_path):
+            try:
+                context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                context.load_cert_chain(cert_path, key_path)
+                print(f"✅ SSL certificates loaded from: {cert_path}")
+                return context
+            except Exception as e:
+                print(f"⚠️  Failed to load SSL from {cert_path}: {e}")
+                continue
     
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    context.load_cert_chain(cert_path, key_path)
-    return context
+    print(f"⚠️  No valid SSL certificates found")
+    print(f"   Tried locations:")
+    for cert, key in cert_locations:
+        exists_cert = "✓" if os.path.exists(cert) else "✗"
+        exists_key = "✓" if os.path.exists(key) else "✗"
+        print(f"   {exists_cert} {cert}")
+        print(f"   {exists_key} {key}")
+    
+    return None
 
 def send_copyright_mail(data, plugin):
     """Send copyright notice email"""
@@ -709,19 +1028,51 @@ if __name__ == '__main__':
     setup_database()
     
     # Download IPFS denylist on startup
+    print(f"🔍 Checking IPFS official denylist...")
     if not os.path.exists(IPFS_DENYLIST_FILE):
-        logging.info("IPFS official denylist not found, downloading...")
-        download_ipfs_denylist()
+        print(f"   Denylist file not found, downloading...")
+        success = download_ipfs_denylist()
+        if success:
+            print(f"   ✅ Downloaded successfully!")
+        else:
+            print(f"   ⚠️  Download failed (will try again in 24h)")
     else:
         file_age = time.time() - os.path.getmtime(IPFS_DENYLIST_FILE)
+        age_hours = int(file_age / 3600)
+        print(f"   Denylist age: {age_hours} hours")
         if file_age > 86400:
-            logging.info("IPFS official denylist older than 24h, updating...")
-            download_ipfs_denylist()
+            print(f"   Denylist older than 24h, updating...")
+            success = download_ipfs_denylist()
+            if success:
+                print(f"   ✅ Updated successfully!")
+            else:
+                print(f"   ⚠️  Update failed (will try again in 24h)")
+        else:
+            print(f"   ✅ Denylist is fresh")
+    
+    # Load and display blacklist stats
+    try:
+        initial_blacklist = load_blacklist()
+        print(f"📋 Blacklist loaded: {len(initial_blacklist)} total CIDs")
+        
+        # Count by source
+        local_count = 0
+        official_count = 0
+        for reason in initial_blacklist.values():
+            if 'official' in reason:
+                official_count += 1
+            else:
+                local_count += 1
+        
+        print(f"   • Local: {local_count} CIDs")
+        print(f"   • Official IPFS: {official_count} CIDs")
+    except Exception as e:
+        print(f"⚠️  Error loading blacklist: {e}")
     
     # Start background denylist updater
     update_thread = threading.Thread(target=scheduled_denylist_update, daemon=True)
     update_thread.start()
-    logging.info("Started background denylist updater (24h interval)")
+    print(f"⏰ Started background denylist updater (24h interval)")
     
     logging.info("Starting IPFS Gateway Flask app")
     audit_log('SERVICE_STARTUP', details={
@@ -732,10 +1083,10 @@ if __name__ == '__main__':
     
     ssl_ctx = create_ssl_context()
     if ssl_ctx:
-        print(f"🔒 Starting with SSL on port 443...")
+        print(f"\n🔒 Starting with SSL on port 443...")
         print(f"📋 Copyright jurisdiction: {COPYRIGHT_COUNTRY}")
         app.run(host='0.0.0.0', port=443, ssl_context=ssl_ctx, debug=False)
     else:
-        print(f"🌐 Starting HTTP on port {APP_PORT}...")
+        print(f"\n🌐 Starting HTTP on port {APP_PORT}...")
         print(f"📋 Copyright jurisdiction: {COPYRIGHT_COUNTRY}")
         app.run(host=APP_HOST, port=APP_PORT, debug=False)
