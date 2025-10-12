@@ -1,5 +1,7 @@
 # ServeBeer IPFS Gateway
 
+![Multi-Jurisdiction Gateway](https://github.com/user-attachments/assets/1fe48ac1-c5d7-42a8-85aa-5971ac99996f)
+
 Public IPFS HTTP Gateway running on community-powered infrastructure. Decentralized content access with HTTPS, multi-jurisdiction copyright compliance, and minimal logging.
 
 ## 🔥 Project Background
